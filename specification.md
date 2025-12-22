@@ -17,18 +17,18 @@ design of the cache.
 **Reliability of short-lived authorization services**:
 When a Pelican cache is embedded in a pilot, it will enforce WLCG
 token-based authorization but the lifetime of the service is the same as
-a pilot.
-If the service is started during an outage of the issuer's JWKS
+that of the pilot.
+If the service is started during unavailability of the issuer's JWKS
 endpoint, then having a copy of the JWKS on the system will allow the
 service to continue operation.
 
 **Reliability of "lazy fetching" authorization libraries**:
 The scitokens-cpp library (and hence HTCondor- and XRootD-based
 services) will only fetch the JWKS on first use.
-If the first usage occurs during an outage of the JWKS endpoint, then
+If the first usage occurs during unavailability of the JWKS endpoint, then
 the access cannot be authorized.
 Having a system-level cache will keep a valid JWKS file at all times
-(assuming the outage of the JWKS endpoint is less than the expiration of
+(assuming unavailability of the JWKS endpoint is less than the expiration of
 the JWKS copy).
 
 **Avoiding rate limits on JWKS endpoints**:
@@ -42,7 +42,7 @@ outgoing queries to known endpoints.
 
 ## JWKS Cache
 
-The **JWKS** of an OIDC token issuer is found by adding
+The **JWKS** of an OIDC token issuer may be found by adding
 `/.well-known/openid-configuration` to the issuer URL and then reading
 the contents of the URL at the `jwks_uri` key found in the JSON object
 there.
@@ -93,7 +93,7 @@ The defined claims inside the entry's value are:
    Interpreted as a Unix epoch time; after this time point, the contents
    of the cache entry should be ignored.
 * `jwks`: The contents of the JWKS object for the issuer.
-   The JWKS may, for example, be fetched from the `jwks_uri` key in the
+   The JWKS may be fetched from the `jwks_uri` key in the
    issuer's OIDC metadata discovery data.
 
 Any undefined keys in the object (such as `next_update` in the above
@@ -189,7 +189,7 @@ the file
 ## JWKS cache location algorithm
 
 The following locations should be searched in this order for an issuer's
-JWKS cache and stop at the first match:
+JWKS cache, stopping at the first match:
 
 1. The directory indicated by the `JWKS_CACHE_DIR` environment variable.
 2. A file indicated by the `JWKS_CACHE_FILE` environment variable.
