@@ -159,7 +159,8 @@ An example of multiple JWKS caches in a single file is below:
 ## Locating the cache file
 
 The system's JWKS cache may be located in a single file or in a directory.
-If a directory is specified, it should be searched first.
+If a directory is specified, it should be searched for cache entry files
+as specified below.
 If at any point a cache entry for an issuer is found and its JWKS is not
 expired, further searches for additional caches for that issuer must stop.
 
