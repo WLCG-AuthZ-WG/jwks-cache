@@ -52,7 +52,7 @@ file) in the cache serialized as a JSON object.
 The entry contains the **issuer name**, the **expiration time** of the
 entry, and the **JWKS** for the issuer.
 
-An example serialized cache entry should have the following example
+An example serialized cache entry could have the following
 information as part of a JSON object (`https://demo.scitokens.org` is
 used for the issuer name):
 
@@ -200,7 +200,7 @@ JWKS cache, stopping at the first match:
    populated by an automated tool).
 6. The default cache file location `/var/cache/jwks/cache.json`.
 
-Here, a "match" is if the file or directory exists *and* the desired
+Here, a "match" is if the file exists *and* the desired
 issuer's JWKS has been cached *and* is valid.
 
 Note - as an alternative, we considered having a `JWKS_CACHE_LOCATION`
