@@ -89,7 +89,7 @@ Key matching should be done by JSON UTF-8 string parsing rules.
 
 The defined claims inside the entry's value are:
 
-* `expiration`: An integer or floating point value.
+* `expiration`: A JSON numeric value.
    Interpreted as a Unix epoch time; after this time point, the contents
    of the cache entry should be ignored.
 * `jwks`: The contents of the JWKS object for the issuer.
