@@ -1,5 +1,43 @@
 # WLCG standard system JWKS cache
 
+_Authored by the WLCG AuthZ Working Group_
+
+**Version History:**
+
+<table>
+ <thead>
+  <tr>
+   <td><strong>Date</strong>
+   </td>
+   <td><strong>Version</strong>
+   </td>
+   <td><strong>Comment</strong>
+   </td>
+  </tr>
+ </thead>
+  <tr>
+   <td>XX.YY.2026
+   </td>
+   <td>x.y
+   </td>
+   <td>First version published on Zenodo
+   </td>
+  </tr>
+</table>
+
+## Table of Contents
+
+- [1. Introduction](#1-introduction)<a id="toc-1"></a>
+- [2. Motivating Examples](#2-motivating-examples)<a id="toc-2"></a>
+- [3. JWKS Cache](#3-jwks-cache)<a id="toc-3"></a>
+- [4. Storing a JWKS cache in a file](#4-storing-a-jwks-cache-in-a-file)<a id="toc-4"></a>
+- [5. Locating the cache file](#5-locating-the-cache-file)<a id="toc-5"></a>
+  - [5.1 Directory structure](#51-directory-structure)<a id="toc-51"></a>
+- [6. JWKS cache location algorithm](#6-jwks-cache-location-algorithm)<a id="toc-6"></a>
+
+## 1. Introduction
+([ToC](#toc-1))
+
 **Goal**:
 Provide a system-wide cache of JWKS information for issuers of interest
 that multiple token-parsing libraries can reuse.
@@ -12,7 +50,8 @@ rate-limiting conditions.
 This document outlines the motivation behind the design choices and the
 design of the cache.
 
-## Motivating Examples
+## 2. Motivating Examples
+([ToC](#toc-2))
 
 **Reliability of short-lived authorization services**:
 When a Pelican cache is embedded in a pilot, it will enforce WLCG
@@ -40,7 +79,8 @@ cache query (such behavior has been observed in practice).
 A system-level cache enables administrators to manage the rate of
 outgoing queries to known endpoints.
 
-## JWKS Cache
+## 3. JWKS Cache
+([ToC](#toc-3))
 
 The **JWKS** of an OIDC token issuer may be found by adding
 `/.well-known/openid-configuration` to the issuer URL and then reading
@@ -104,6 +144,8 @@ A serialized JSON cache containing two entries for the issuers
 `https://demo.scitokens.org` and `https://cilogon.org` may have the
 following representation:
 
+<div class="page-break"></div>
+
 ```
 {
   "https://demo.scitokens.org": {
@@ -119,7 +161,8 @@ following representation:
 }
 ```
 
-## Storing a JWKS cache in a file
+## 4. Storing a JWKS cache in a file
+([ToC](#toc-4))
 
 A JWKS cache may be stored in a file using JSON's ASCII serialization.
 A parser should ignore any whitespace character bytes prior to the first
@@ -156,7 +199,8 @@ An example of multiple JWKS caches in a single file is below:
 }
 ```
 
-## Locating the cache file
+## 5. Locating the cache file
+([ToC](#toc-5))
 
 The system's JWKS cache may be located in a single file or in a directory.
 If a directory is specified, it should be searched for cache entry files
@@ -164,7 +208,8 @@ as specified below.
 If at any point a cache entry for an issuer is found and its JWKS is not
 expired, further searches for additional caches for that issuer must stop.
 
-### Directory structure
+### 5.1. Directory structure
+([ToC](#toc-51))
 
 If a directory is specified to be searched, the parser should search for
 a given issuer's cache using the following rules:
@@ -187,7 +232,8 @@ the file
         defd42fc2ae81f9628744cf6232e40c18697e65b5ef7e828c6223aa1b706bebb
 ```
 
-## JWKS cache location algorithm
+## 6. JWKS cache location algorithm
+([ToC](#toc-6))
 
 The following locations should be searched in this order for an issuer's
 JWKS cache, stopping at the first match:
