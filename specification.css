@@ -41,6 +41,7 @@ td {
     table {
         font-size: small;
     }
+    .page, .page-break { break-after: page; }
 }
 @page {
     size: 8.3in 11in;
