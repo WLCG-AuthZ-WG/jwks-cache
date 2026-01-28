@@ -1,0 +1,205 @@
+<style>
+body {
+    margin-left: 5%;
+    text-align: justify;
+    font-size: x-large;
+    width: 90%
+}
+table {
+    font-size: x-large;
+    margin-left: auto;
+    margin-right: auto;
+    border-spacing: 0;
+    border-bottom: 1px solid black;
+    border-top: 1px solid black;
+    break-before: auto;
+}
+tr {
+    break-inside: avoid;
+}
+th {
+    padding: 3px 10px;
+    background-color: white;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    border-bottom: 2px solid black;
+    break-after: avoid;
+    break-inside: avoid;
+}
+td {
+    padding: 3px 10px;
+    border-top: 1px solid black;
+    border-left: 1px solid black;
+    border-right: 1px solid black;
+    border-bottom: 1px solid black;
+}
+@media print {
+    body {
+        font-size: small;
+    }
+    table {
+        font-size: small;
+    }
+    .page, .page-break { break-after: page; }
+}
+@page {
+    size: 8.3in 11in;
+    margin-top: 1cm;
+    margin-left: 1cm;
+    margin-right: 1cm;
+    margin-bottom: 1cm;
+
+    counter-increment: pageNumber;
+
+    @bottom-right {
+        content: counter(pageNumber);
+    }
+}
+</style>
+<h1 id="wlcg-standard-system-jwks-cache">WLCG standard system JWKS cache</h1>
+<p><em>Authored by the WLCG AuthZ Working Group</em></p>
+<p><strong>Version History:</strong></p>
+<table>
+<thead>
+<tr>
+<td>
+<strong>Date</strong>
+</td>
+<td>
+<strong>Version</strong>
+</td>
+<td>
+<strong>Comment</strong>
+</td>
+</tr>
+</thead>
+<tr>
+<td>
+27.01.2026
+</td>
+<td>
+1.0
+</td>
+<td>
+First version published on <a href="https://zenodo.org/records/18392301">Zenodo</a>
+</td>
+</tr>
+</table>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#s1-introduction">1. Introduction</a><a id="toc-1"></a></li>
+<li><a href="#s2-motivating-examples">2. Motivating Examples</a><a id="toc-2"></a></li>
+<li><a href="#s3-jwks-cache">3. JWKS Cache</a><a id="toc-3"></a></li>
+<li><a href="#s4-storing-a-jwks-cache-in-a-file">4. Storing a JWKS cache in a file</a><a id="toc-4"></a></li>
+<li><a href="#s5-locating-the-cache-file">5. Locating the cache file</a><a id="toc-5"></a>
+<ul>
+<li><a href="#s51-directory-structure">5.1 Directory structure</a><a id="toc-51"></a></li>
+</ul></li>
+<li><a href="#s6-jwks-cache-location-algorithm">6. JWKS cache location algorithm</a><a id="toc-6"></a></li>
+</ul>
+<h2 id="s1-introduction">1. Introduction</h2>
+<p>(<a href="#toc-1">ToC</a>)</p>
+<p><strong>Goal</strong>: Provide a system-wide cache of JWKS information for issuers of interest that multiple token-parsing libraries can reuse. By having a cache in a trusted location on the system (and allowing the library to trust the system), we can reduce the impact of temporary outages of the JWKS endpoint, support clients that do not have direct access to the internet, reduce the load on the endpoint, and avoid rate-limiting conditions.</p>
+<p>This document outlines the motivation behind the design choices and the design of the cache.</p>
+<h2 id="s2-motivating-examples">2. Motivating Examples</h2>
+<p>(<a href="#toc-2">ToC</a>)</p>
+<p><strong>Reliability of short-lived authorization services</strong>: When a Pelican cache is embedded in a pilot, it will enforce WLCG token-based authorization but the lifetime of the service is the same as that of the pilot. If the service is started during unavailability of the issuer&#x2019;s JWKS endpoint, then having a copy of the JWKS on the system will allow the service to continue operation.</p>
+<p><strong>Reliability of &#x201C;lazy fetching&#x201D; authorization libraries</strong>: The scitokens-cpp library (and hence HTCondor- and XRootD-based services) will only fetch the JWKS on first use. If the first usage occurs during unavailability of the JWKS endpoint, then the access cannot be authorized. Having a system-level cache will keep a valid JWKS file at all times (assuming unavailability of the JWKS endpoint is less than the expiration of the JWKS copy).</p>
+<p><strong>Avoiding rate limits on JWKS endpoints</strong>: Some JWKS endpoints may have conservative rate limiting compared to the size of the computing resources. For example, if a large cluster is on an IPv6 /64 network, it may easily trigger a default rate limiter if worker nodes frequently trigger a JWKS cache query (such behavior has been observed in practice). A system-level cache enables administrators to manage the rate of outgoing queries to known endpoints.</p>
+<h2 id="s3-jwks-cache">3. JWKS Cache</h2>
+<p>(<a href="#toc-3">ToC</a>)</p>
+<p>The <strong>JWKS</strong> of an OIDC token issuer may be found by adding <code>/.well-known/openid-configuration</code> to the issuer URL and then reading the contents of the URL at the <code>jwks_uri</code> key found in the JSON object there.</p>
+<p>Given the JWKS itself is a JSON object, we plan to have each entry (or file) in the cache serialized as a JSON object. The entry contains the <strong>issuer name</strong>, the <strong>expiration time</strong> of the entry, and the <strong>JWKS</strong> for the issuer.</p>
+<p>An example serialized cache entry could have the following information as part of a JSON object (<code>https://demo.scitokens.org</code> is used for the issuer name):</p>
+<pre><code>{
+  &quot;https://demo.scitokens.org&quot;: {
+    &quot;expiration&quot;: 1755703888.4,
+    &quot;next_update&quot;: 1755700888,
+    &quot;jwks&quot;: {
+      &quot;keys&quot;: [
+        {
+          &quot;alg&quot;: &quot;ES256&quot;,
+          &quot;crv&quot;: &quot;P-256&quot;,
+          &quot;kid&quot;: &quot;b9ee&quot;,
+          &quot;kty&quot;: &quot;EC&quot;,
+          &quot;use&quot;: &quot;sig&quot;,
+          &quot;x&quot;: &quot;ZsvEqnMaAWT5bMcIt5lx3HajCw6xfhl387U95JPoc0g=&quot;,
+          &quot;y&quot;: &quot;D3-Bf0RKzeBSwoNdzkzcvalE7VTCM-gVTlWgSqPQm28=&quot;
+        },
+        {
+          &quot;alg&quot;: &quot;RS256&quot;,
+          ...
+        }
+      ]
+    }
+  }
+}</code></pre>
+<p>The lookup key to the object is the issuer name (the contents of the <code>iss</code> claim in a JWT); we do not prescribe a specific serialization or normalization of the issuer URL for the cache entry. Key matching should be done by JSON UTF-8 string parsing rules.</p>
+<p>The defined claims inside the entry&#x2019;s value are:</p>
+<ul>
+<li><code>expiration</code>: A JSON numeric value. Interpreted as a Unix epoch time; after this time point, the contents of the cache entry should be ignored.</li>
+<li><code>jwks</code>: The contents of the JWKS object for the issuer. The JWKS may be fetched from the <code>jwks_uri</code> key in the issuer&#x2019;s OIDC metadata discovery data.</li>
+</ul>
+<p>Any undefined keys in the object (such as <code>next_update</code> in the above example) should be ignored by any parsing library as they may be used by the tool creating the cache.</p>
+<p>A serialized JSON cache containing two entries for the issuers <code>https://demo.scitokens.org</code> and <code>https://cilogon.org</code> may have the following representation:</p>
+<div class="page-break">
+
+</div>
+<pre><code>{
+  &quot;https://demo.scitokens.org&quot;: {
+    &quot;expiration&quot;: 1755703888,
+    &quot;next_update&quot;: 1755700888,
+    &quot;jwks&quot;: (JSON object of the JWKS)
+  },
+  &quot;https://cilogon.org&quot;: {
+    &quot;expiration&quot;: 1755709999,
+    &quot;next_update&quot;: 1755709999,
+    &quot;jwks&quot;: (JSON object of the JWKS)
+  }
+}</code></pre>
+<h2 id="s4-storing-a-jwks-cache-in-a-file">4. Storing a JWKS cache in a file</h2>
+<p>(<a href="#toc-4">ToC</a>)</p>
+<p>A JWKS cache may be stored in a file using JSON&#x2019;s ASCII serialization. A parser should ignore any whitespace character bytes prior to the first <code>{</code> in the JSON object and after the last <code>}</code> in the JSON object. If any non-whitespace characters are encountered outside JSON object parsing, the file parsing must stop and any further caches listed must be ignored.</p>
+<p>If there are multiple JSON objects in a file, they may be parsed as multiple caches and merged together into a single JSON object (subsequent keys should update prior keys; there is no mechanism for deleting a cache entry). This format is designed to allow system administrators to combine cache files together using simple Unix tools such as <code>cat</code>; JSON can otherwise be a little more difficult to concatenate (although <code>jq -s add</code> merges them pretty well).</p>
+<p>An example of multiple JWKS caches in a single file is below:</p>
+<pre><code>{
+  &quot;https://demo.scitokens.org&quot;: {
+    &quot;expiration&quot;: 1755703888,
+    &quot;next_update&quot;: 1755700888,
+    &quot;jwks&quot;: (JSON object of the JWKS)
+  }
+}
+{
+  &quot;https://cilogon.org&quot;: {
+    &quot;expiration&quot;: 1755709999,
+    &quot;next_update&quot;: 1755709999,
+    &quot;jwks&quot;: (JSON object of the JWKS)
+  }
+}</code></pre>
+<h2 id="s5-locating-the-cache-file">5. Locating the cache file</h2>
+<p>(<a href="#toc-5">ToC</a>)</p>
+<p>The system&#x2019;s JWKS cache may be located in a single file or in a directory. If a directory is specified, it should be searched for cache entry files as specified below. If at any point a cache entry for an issuer is found and its JWKS is not expired, further searches for additional caches for that issuer must stop.</p>
+<h3 id="s51-directory-structure">5.1. Directory structure</h3>
+<p>(<a href="#toc-51">ToC</a>)</p>
+<p>If a directory is specified to be searched, the parser should search for a given issuer&#x2019;s cache using the following rules:</p>
+<ol type="1">
+<li>Create the SHA256 hash of the issuer URL and serialize the hash into hexadecimal ASCII. Use that as the file name.</li>
+<li>Inside the directory, parse the file as a cache, making sure that there is an entry for the given issuer. If the file is not found or the given issuer is not in the file, return a code indicating that there was a cache miss, but if the file is found and has a parsing failure, return a code indicating that there was a parse error.</li>
+</ol>
+<p>For example, for the issuer <code>https://demo.scitokens.org</code> and the specified directory named <code>Trusted-issuer-dir</code>, the JWKS may be found in the file</p>
+<pre><code>    Trusted-issuer-dir / 
+        defd42fc2ae81f9628744cf6232e40c18697e65b5ef7e828c6223aa1b706bebb</code></pre>
+<h2 id="s6-jwks-cache-location-algorithm">6. JWKS cache location algorithm</h2>
+<p>(<a href="#toc-6">ToC</a>)</p>
+<p>The following locations should be searched in this order for an issuer&#x2019;s JWKS cache, stopping at the first match:</p>
+<ol type="1">
+<li>The directory indicated by the <code>JWKS_CACHE_DIR</code> environment variable.</li>
+<li>A file indicated by the <code>JWKS_CACHE_FILE</code> environment variable.</li>
+<li>A directory <code>/etc/jwks</code> for system administrator overrides.</li>
+<li>A file <code>/etc/jwks/cache.json</code> for system administrator overrides.</li>
+<li>The default cache directory location <code>/var/cache/jwks</code> (typically populated by an automated tool).</li>
+<li>The default cache file location <code>/var/cache/jwks/cache.json</code>.</li>
+</ol>
+<p>Here, a &#x201C;match&#x201D; is if the file exists <em>and</em> the desired issuer&#x2019;s JWKS has been cached <em>and</em> is valid.</p>
+<p>Note - as an alternative, we considered having a <code>JWKS_CACHE_LOCATION</code> environment variable that&#x2019;s agnostic to whether it is a directory or a file; to avoid confusion for libraries, we decided it was more prudent to be explicit than implicit.</p>
